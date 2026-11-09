@@ -1,6 +1,10 @@
 //! `advisory-watch`: find Soroban contracts that may be affected by
 //! soroban-sdk security advisories.
 
+// Doc comments on the clap types below are printed as terminal help text,
+// where a bare URL is what the user should see.
+#![allow(rustdoc::bare_urls)]
+
 use std::collections::BTreeMap;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
