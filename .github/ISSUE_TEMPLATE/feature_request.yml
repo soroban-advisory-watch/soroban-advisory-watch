@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a new check, output format or data source.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to find out that the tool does not tell you today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: For a new signal or matching rule, link the advisory text or source code it is based on.
