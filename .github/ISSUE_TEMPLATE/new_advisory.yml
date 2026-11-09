@@ -1,0 +1,21 @@
+name: New advisory
+description: A Soroban crate advisory that is not bundled yet.
+labels: ["advisory-data"]
+body:
+  - type: input
+    id: id
+    attributes:
+      label: GHSA or CVE id
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Advisory URL
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Conditions
+      description: What else, beyond the version, must be true for a contract to be affected? Quote the advisory.

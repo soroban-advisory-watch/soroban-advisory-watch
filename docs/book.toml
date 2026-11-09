@@ -1,0 +1,10 @@
+[book]
+title = "soroban-advisory-watch"
+description = "Find deployed Soroban contracts that may be affected by soroban-sdk security advisories."
+authors = ["soroban-advisory-watch contributors"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/soroban-advisory-watch/soroban-advisory-watch"
+edit-url-template = "https://github.com/soroban-advisory-watch/soroban-advisory-watch/edit/main/docs/{path}"

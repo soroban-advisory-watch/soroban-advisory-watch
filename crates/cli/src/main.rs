@@ -98,7 +98,7 @@ struct ScanArgs {
 
 #[derive(Args)]
 struct ReportArgs {
-    /// Inventory file (.jsonl or .csv). See `docs/` for the format.
+    /// Inventory file (.jsonl or .csv). Format: https://soroban-advisory-watch.github.io/soroban-advisory-watch/reference/inventory.html
     #[arg(long, value_name = "FILE")]
     inventory: PathBuf,
     /// Directory of `<wasm-hash>.wasm` files. Read before calling RPC;

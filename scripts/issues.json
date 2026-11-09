@@ -1,0 +1,102 @@
+[
+  {
+    "title": "Fix pluralisation in report text summary",
+    "labels": ["good first issue", "type: bug", "complexity: low", "area: core"],
+    "body": "## Summary\n\n`advisory-watch report` prints lines such as `5 contracts, 3 unique Wasm, 1 Stellar Asset Contracts` and `1 contracts in 1 Wasm`. Singular counts should read `1 Stellar Asset Contract` and `1 contract`.\n\n## Where\n\n`NetworkReport::to_text` in `crates/core/src/report.rs`.\n\n## Acceptance criteria\n\n- [ ] Counts of 1 use the singular noun for `contract` and `Stellar Asset Contract`\n- [ ] Counts of 0 and 2+ use the plural\n- [ ] A unit test in `report.rs` covers 0, 1 and 2\n- [ ] The example output in `docs/src/guides/network-report.md` is updated\n\n## Tech stack\n\nRust"
+  },
+  {
+    "title": "Print a summary line after multi-target scan output",
+    "labels": ["good first issue", "type: feature", "complexity: low", "area: core"],
+    "body": "## Summary\n\nWhen `scan` is given several `--wasm` or `--contract-id` values, the text output lists each target but gives no total. Add a final line such as `3 targets: 1 possible, 1 unknown, 1 not-matched`.\n\n## Where\n\n`ScanReport::to_text` in `crates/core/src/report.rs`.\n\n## Acceptance criteria\n\n- [ ] Summary line printed only when there is more than one target\n- [ ] Counts by overall status, in the order possible, unknown, not-matched, not-applicable, omitting zero counts\n- [ ] JSON output unchanged\n- [ ] Test in `report.rs` and an end-to-end test in `crates/cli/tests/cli.rs` using two fixtures\n\n## Tech stack\n\nRust"
+  },
+  {
+    "title": "Accept a directory for scan --wasm",
+    "labels": ["good first issue", "type: feature", "complexity: low", "area: cli"],
+    "body": "## Summary\n\nWorkspaces with several contracts produce several `.wasm` files under `target/wasm32v1-none/release/`. Let `--wasm` take a directory and scan every `*.wasm` file directly inside it (not recursive).\n\n## Acceptance criteria\n\n- [ ] `advisory-watch scan --wasm fixtures/wasm` scans all three fixtures\n- [ ] Files are scanned in sorted order so output is stable\n- [ ] A directory with no `.wasm` files is an error (exit code 2) with a clear message\n- [ ] End-to-end test in `crates/cli/tests/cli.rs`\n- [ ] `docs/src/reference/cli.md` regenerated and `docs/src/guides/ci.md` mentions the option\n\n## Tech stack\n\nRust, clap"
+  },
+  {
+    "title": "Show cliver and other build meta keys in scan output",
+    "labels": ["good first issue", "type: feature", "complexity: low", "area: core"],
+    "body": "## Summary\n\n`stellar contract build` writes `cliver` (Stellar CLI version) and lets users add keys with `--meta`, for example `source_repo` and `commit_sha`. These help a reviewer find the source of a deployed contract. Today `scan` shows only `rssdkver`, `rsver` and the protocol.\n\n## Acceptance criteria\n\n- [ ] `TargetReport` gets a `meta` field with all `contractmetav0` entries (JSON output)\n- [ ] Text output shows `cliver`, `source_repo` and `commit_sha` when present\n- [ ] Values are printed as-is; the docs say they are self-reported and unverified\n- [ ] Unit test with a synthetic module that has these keys (see `test_support` in `crates/core/src/lib.rs`)\n- [ ] `docs/src/reference/output.md` updated\n\n## Tech stack\n\nRust"
+  },
+  {
+    "title": "Add cargo-binstall metadata for release binaries",
+    "labels": ["good first issue", "type: ci", "complexity: low", "area: cli"],
+    "body": "## Summary\n\nThe release workflow publishes `advisory-watch-<tag>-<target>.tar.gz` (and `.zip` on Windows). Adding `[package.metadata.binstall]` to `crates/cli/Cargo.toml` lets users run `cargo binstall soroban-advisory-watch` instead of compiling.\n\n## Acceptance criteria\n\n- [ ] `pkg-url`, `bin-dir` and `pkg-fmt` match the asset names and archive layout in `.github/workflows/release.yml`\n- [ ] Windows override uses `zip`\n- [ ] `docs/src/install.md` documents the command\n\n## Tech stack\n\nCargo metadata, GitHub Actions\n\n## Reference\n\nhttps://github.com/cargo-bins/cargo-binstall/blob/main/SUPPORT.md"
+  },
+  {
+    "title": "Add CSV output for report",
+    "labels": ["good first issue", "type: feature", "complexity: low", "area: cli"],
+    "body": "## Summary\n\nTeams want to open network reports in a spreadsheet. Add `--format csv` to `report`, with one row per contract.\n\n## Acceptance criteria\n\n- [ ] Columns: `contract_id,wasm_hash,sdk_version,status,possible_advisories` (advisory ids joined with `;`)\n- [ ] Stellar Asset Contracts and error rows included with `status` `not-applicable` and `error`\n- [ ] `--format csv` on `scan` is rejected with a clear error, or also implemented with the same columns\n- [ ] End-to-end test using `examples/inventory.jsonl` and `examples/wasm`\n- [ ] `docs/src/reference/output.md` documents the columns\n\n## Tech stack\n\nRust"
+  },
+  {
+    "title": "Add signal for slice and gen_range host imports (GHSA-96xm-fv9w-pf3f)",
+    "labels": ["type: feature", "complexity: medium", "area: core", "area: data"],
+    "body": "## Summary\n\nGHSA-96xm-fv9w-pf3f only matters for contracts that call `Bytes::slice`, `Vec::slice` or `Prng::gen_range` for `u64`. In soroban-sdk 25.0.1 these call the host functions `bytes_slice` (`b.f`), `vec_slice` (`v.c`) and `prng_u64_in_inclusive_range` (`p.1`), per `soroban-env-common/env.json`. A Wasm that imports none of them never reaches that host code.\n\nAdd a signal `imports-slice-or-range-host-functions` and attach it to the advisory in `advisories/annotations.toml`.\n\n## Care needed\n\n- Other SDK methods may call the same host functions. Check `rs-soroban-sdk` source for every caller of these three functions in the affected versions and document them in the signal's `limits` text.\n- Signals never change status. `observed: false` must not produce `not-matched`.\n- Confirm the export names are the same in soroban-sdk 22.x and 23.x.\n\n## Acceptance criteria\n\n- [ ] Signal implemented in `crates/core/src/signals.rs` with a `limits` explanation backed by the source review\n- [ ] Annotation updated; `annotation_signals_are_known` test passes\n- [ ] Unit tests for observed and not observed\n- [ ] `docs/src/how-it-works.md` signal table updated\n\n## Tech stack\n\nRust, Soroban SDK internals"
+  },
+  {
+    "title": "Fetch advisories from OSV.dev with an `advisories update` command",
+    "labels": ["type: feature", "complexity: medium", "area: cli", "area: data"],
+    "body": "## Summary\n\nThe binary bundles the advisories known at release time. New ones need `--osv FILE`. Add `advisory-watch advisories update` that downloads current OSV records for Soroban crates and stores them in a cache directory, and make `scan` and `report` load that cache automatically.\n\n## Design\n\n- OSV API: `POST https://api.osv.dev/v1/query` with `{\"package\":{\"ecosystem\":\"crates.io\",\"name\":\"soroban-sdk\"}}`. Query at least `soroban-sdk`, `soroban-sdk-macros`, `soroban-spec`, `soroban-env-host`, `soroban-env-common`.\n- Cache location: platform cache dir (for example `dirs::cache_dir()`), overridable with `--advisory-cache`.\n- Cached records override bundled ones with the same id (this already works through `AdvisoryDb::add_osv_json`).\n- Networking stays in `crates/cli`; reuse the `ureq` agent.\n\n## Acceptance criteria\n\n- [ ] `advisories update` downloads, validates (parses) and writes records; prints how many were added or changed\n- [ ] `scan`/`report` use the cache when present; `--no-cache` disables it\n- [ ] Tests use a local mock HTTP server (see `spawn_rpc` in `crates/cli/tests/cli.rs`), no real network\n- [ ] Docs: `docs/src/guides/new-advisory.md` and `docs/src/reference/cli.md`\n\n## Tech stack\n\nRust, ureq, OSV schema"
+  },
+  {
+    "title": "Verify and document the Hubble inventory query",
+    "labels": ["type: research", "complexity: medium", "area: docs", "area: data"],
+    "body": "## Summary\n\n`examples/hubble-contract-instances.sql` was written from the Hubble data dictionary and stellar-etl source, but has not been run against BigQuery. Run it, fix it if needed, and record what it costs.\n\n## Questions to answer\n\n- Is the table path `crypto-stellar.crypto_stellar.contract_data` correct?\n- Does `contract_key_type = 'ScValTypeScvLedgerKeyContractInstance'` match the stored values?\n- How are archived (evicted) instance entries represented? Should they be excluded?\n- How many bytes does the query scan? Can a partition filter on `closed_at` reduce it without missing contracts?\n- Is there a cheaper silver table (for example `contract_data_snapshot`) that gives the same result?\n\n## Acceptance criteria\n\n- [ ] Query runs and the export works unchanged with `advisory-watch report --inventory`\n- [ ] SQL file updated; the \"not yet run\" note replaced with the date run and bytes scanned\n- [ ] `docs/src/guides/network-report.md` updated with the findings\n- [ ] Row count and run date noted in the PR (no contract lists needed)\n\n## Tech stack\n\nBigQuery SQL, Stellar Hubble"
+  },
+  {
+    "title": "Resolve the exact soroban-sdk-macros version from Cargo.lock",
+    "labels": ["type: feature", "complexity: medium", "area: core", "area: cli"],
+    "body": "## Summary\n\nFor `soroban-sdk-macros` advisories the Wasm only gives a lower bound, so results are `possible` with low confidence. When scanning a local build, the user usually has the `Cargo.lock`. Add `scan --lockfile Cargo.lock` to read exact versions for crates the Wasm does not record.\n\n## Acceptance criteria\n\n- [ ] Parse `Cargo.lock` (v3 and v4) with the `toml` crate already in the dependency tree, or the `cargo-lock` crate\n- [ ] With a lock file, `soroban-sdk-macros` and third-party crates such as `soroban-fixed-point-math` are matched exactly; confidence `high`, `version_recorded: true`\n- [ ] The lock file's `soroban-sdk` version must equal `rssdkver`; if not, print a warning and ignore the lock file for that target\n- [ ] A lock file listing two versions of a crate uses all of them (any affected version gives `possible`)\n- [ ] Tests with the lock files in `fixtures/contracts/*/Cargo.lock`\n- [ ] Docs updated (`guides/ci.md`, `how-it-works.md`)\n\n## Tech stack\n\nRust"
+  },
+  {
+    "title": "Check rssdkver git revision against release tags",
+    "labels": ["type: feature", "complexity: medium", "area: core", "area: data"],
+    "body": "## Summary\n\n`rssdkver` holds the SDK version and git revision, for example `25.0.1#941448079eccf95627d2ffea13ba268e305a9077`. A crates.io release has a fixed revision. A different revision means the contract was built from a git dependency or a fork, where the version number may not describe the code.\n\nAdd a bundled table of `version -> revision` for soroban-sdk releases and add a note to the target when the revision does not match.\n\n## Acceptance criteria\n\n- [ ] Script in `scripts/` that builds the table from crates.io or GitHub tags (document the source)\n- [ ] Table covers 22.0.0 onward and is compiled into the core crate\n- [ ] Target JSON gets `sdk_revision_matches_release: true|false|null` (null when the version is not in the table)\n- [ ] Text output prints a warning on mismatch\n- [ ] Status rules unchanged\n- [ ] Tests use the two fixture revisions, which come from crates.io builds\n\n## Tech stack\n\nRust, crates.io API or git tags"
+  },
+  {
+    "title": "Batch getLedgerEntries requests in report",
+    "labels": ["type: feature", "complexity: medium", "area: core", "area: cli"],
+    "body": "## Summary\n\n`report` downloads each unique Wasm with its own `getLedgerEntries` call. The RPC method accepts many keys per request, so a network report with thousands of Wasm hashes makes far more requests than needed.\n\n## Acceptance criteria\n\n- [ ] `RpcClient` gets `wasm_by_hashes(&[&str]) -> Vec<(hash, Result<Vec<u8>>)>`\n- [ ] `report` fetches uncached Wasm in batches; batch size flag `--rpc-batch-size` with a default no higher than the limit documented by Stellar RPC (find and cite it)\n- [ ] Missing entries in a batch are reported per hash, not as a batch failure\n- [ ] Downloaded bytes still checked against their hash\n- [ ] Unit tests with the replay transport; end-to-end test with the mock server\n\n## Tech stack\n\nRust, Stellar RPC"
+  },
+  {
+    "title": "Retry and rate-limit RPC calls",
+    "labels": ["type: feature", "complexity: medium", "area: cli"],
+    "body": "## Summary\n\nPublic RPC providers rate-limit. One HTTP 429 or timeout during a long `report` run currently turns that Wasm into an error.\n\n## Acceptance criteria\n\n- [ ] Retry on HTTP 429, 502, 503, 504 and timeouts, with exponential backoff and jitter; honour `Retry-After`\n- [ ] `--rpc-retries` (default 3) and `--rpc-max-rps` (default unlimited) flags\n- [ ] JSON-RPC errors are not retried\n- [ ] Implemented in the CLI's `Transport`; core crate unchanged\n- [ ] Tests with a mock server that returns 429 then 200\n\n## Tech stack\n\nRust, ureq"
+  },
+  {
+    "title": "Add a reusable GitHub Action",
+    "labels": ["type: feature", "complexity: medium", "type: ci"],
+    "body": "## Summary\n\nMake CI adoption one step: a composite action in `action.yml` at the repository root, so contract repositories can write:\n\n```yaml\n- uses: soroban-advisory-watch/soroban-advisory-watch@v0\n  with:\n    wasm: target/wasm32v1-none/release/my_contract.wasm\n    fail-on: possible\n```\n\n## Acceptance criteria\n\n- [ ] Inputs: `wasm` (path or glob), `fail-on`, `version` (release tag, default latest), `format`\n- [ ] Downloads the release binary for the runner OS and checks it against `SHA256SUMS`; no compiling\n- [ ] Writes the text report to the job summary (`$GITHUB_STEP_SUMMARY`)\n- [ ] A workflow in this repository runs the action against `fixtures/wasm`\n- [ ] `docs/src/guides/ci.md` documents it\n\n## Tech stack\n\nGitHub Actions (composite), bash"
+  },
+  {
+    "title": "Add SARIF output for scan",
+    "labels": ["type: feature", "complexity: medium", "area: core"],
+    "body": "## Summary\n\nGitHub code scanning and many security dashboards read SARIF 2.1.0. Add `--format sarif` to `scan` so results show up in the Security tab of a contract repository.\n\n## Acceptance criteria\n\n- [ ] One SARIF `rule` per advisory (id, summary, help URI = advisory URL)\n- [ ] One `result` per `possible` finding; `unknown` findings as `note` level, `not-matched` omitted\n- [ ] Location is the Wasm file path\n- [ ] Output validates against the SARIF 2.1.0 JSON schema in a test\n- [ ] `docs/src/reference/output.md` documents the mapping\n\n## Tech stack\n\nRust, SARIF 2.1.0"
+  },
+  {
+    "title": "Publish a JSON Schema for scan and report output",
+    "labels": ["type: feature", "complexity: medium", "area: core", "area: docs"],
+    "body": "## Summary\n\nIntegrators parse the JSON output. A schema lets them validate it and catch breaking changes.\n\n## Acceptance criteria\n\n- [ ] Schemas generated from the Rust types (for example with `schemars`) into `docs/schema/scan.json` and `docs/schema/report.json`\n- [ ] A test fails if the committed schema differs from the generated one\n- [ ] A test validates real output from the fixtures against the schema\n- [ ] Schemas linked from `docs/src/reference/output.md`\n\n## Tech stack\n\nRust, JSON Schema"
+  },
+  {
+    "title": "Fuzz the Wasm, OSV and inventory parsers",
+    "labels": ["type: test", "complexity: high", "area: core"],
+    "body": "## Summary\n\nThe tool reads untrusted input: Wasm from the ledger, RPC responses, OSV files and inventories. Add `cargo-fuzz` targets so crashes and unbounded allocations are found before users hit them.\n\n## Acceptance criteria\n\n- [ ] `fuzz/` crate with targets for `wasm::analyze`, `AdvisoryDb::add_osv_file_contents`, `inventory::parse` (both formats) and `rpc::executable_from_contract_data_xdr`\n- [ ] Seed corpus from `fixtures/wasm`, `advisories/osv` and `examples/inventory.jsonl`\n- [ ] Each target runs 10 minutes locally without a crash; any bugs found are fixed with a regression test\n- [ ] `docs/src/development.md` explains how to run them\n\n## Tech stack\n\nRust, cargo-fuzz (nightly)"
+  },
+  {
+    "title": "Research: detect overflow-checks setting from Wasm",
+    "labels": ["type: research", "complexity: high", "area: core"],
+    "body": "## Summary\n\nGHSA-96xm-fv9w-pf3f only affects contracts built with `overflow-checks = false`. If the setting can be inferred from the Wasm, the tool could add a signal for it.\n\n## Questions\n\n- With `overflow-checks = true`, rustc inserts checked arithmetic that branches to a panic. Is there a reliable, SDK-independent pattern in the compiled Wasm (for example around the `slice` code paths)?\n- How do `opt-level`, `lto` and `wasm-opt` change the pattern?\n- What is the false-positive and false-negative rate on the fixture contracts built both ways?\n\n## Acceptance criteria\n\n- [ ] Write-up in `docs/src/research/overflow-checks.md` with the method, the contracts tested, and results\n- [ ] Fixture contracts built with both settings added under `fixtures/contracts/`\n- [ ] Recommendation: implement as a signal, or not, with reasons\n- [ ] No change to status rules\n\n## Tech stack\n\nRust, Wasm, `wasm-tools`"
+  },
+  {
+    "title": "Research: support the ExternalRef contract executable",
+    "labels": ["type: research", "complexity: medium", "area: core"],
+    "body": "## Summary\n\n`stellar-xdr` 30 adds a third `ContractExecutable` variant, `ExternalRef(ContractExecutableExternalRef)`. The tool currently reports such contracts as `executable type external-ref is not supported yet`.\n\n## Tasks\n\n- [ ] Find the CAP or protocol change that introduced it and what code such a contract runs\n- [ ] Decide how to scan it (follow the reference to a Wasm hash? treat like Stellar Asset Contracts?)\n- [ ] Implement in `crates/core/src/rpc.rs` and `inventory.rs`, with tests\n- [ ] Document in `docs/src/how-it-works.md`\n\n## Tech stack\n\nRust, Stellar XDR, CAPs"
+  },
+  {
+    "title": "Build an inventory without BigQuery",
+    "labels": ["type: feature", "complexity: high", "area: cli", "area: data"],
+    "body": "## Summary\n\nNetwork reports need an inventory, and the documented route uses Hubble on BigQuery, which needs a Google Cloud account. Add a route that only needs public Stellar infrastructure.\n\n## Options to evaluate\n\n1. Read ledger metadata exported by Galexie (Stellar's ledger exporter) to a data lake, and collect contract instance entries.\n2. Follow `createContract` operations and `ContractData` instance changes via Stellar RPC `getTransactions`/`getLedgers` over the RPC retention window, then maintain the list incrementally.\n\n## Acceptance criteria\n\n- [ ] Short design note in the PR comparing the options (coverage, time, cost) with sources\n- [ ] `advisory-watch inventory build ...` writes a JSONL inventory in the existing format\n- [ ] Incremental: a second run only processes new ledgers\n- [ ] Tests with recorded ledger data, no live network\n- [ ] Docs page under `guides/`\n\n## Tech stack\n\nRust, Stellar RPC or Galexie, XDR"
+  }
+]
